@@ -13,6 +13,8 @@ def sair(conexao):
     print(conexao, 'conexão fechada')
     conexao.fechar()
 
+dicionario = {}
+
 def dados_recebidos(conexao, dados):
     global residuos
     if dados == b'':
@@ -33,12 +35,15 @@ def dados_recebidos(conexao, dados):
                 residuos += dados
                 residuos = residuos.replace(b'NICK ', b'')
                 residuos = residuos.replace(b'\r\n', b'')
+                if residuos in dicionario:
+                  conexao.enviar(b':server 433 * %s :Nickname is already in use\r\n' %residuos)
                 if validar_nome(residuos) == False:
                     print(residuos)
                     conexao.enviar(b':server 432 * %s :Erroneous nickname\r\n' % residuos)
                 else:
                     conexao.enviar(b':server 001 %s :Welcome\r\n' % residuos)
                     conexao.enviar(b':server 422 %s :MOTD File is missing\r\n' % residuos)
+                    dicionario[residuos] = conexao
                 residuos = b''
         #separar em linhas os dados recebidos
             else:
@@ -67,4 +72,3 @@ def conexao_aceita(conexao):
 servidor = Servidor(6667)
 servidor.registrar_monitor_de_conexoes_aceitas(conexao_aceita)
 asyncio.get_event_loop().run_forever()
-
