@@ -7,24 +7,59 @@ import socket, base64, os
 def validar_nome(nome):
     return re.match(br'^[a-zA-Z][a-zA-Z0-9_-]*$', nome) is not None
 
+residuos = b''
 
 def sair(conexao):
     print(conexao, 'conexão fechada')
     conexao.fechar()
 
-
 def dados_recebidos(conexao, dados):
+    global residuos
     if dados == b'':
         return sair(conexao)
     print(conexao, dados)
-    
-    #Se achar um PING vai dar o PONG
-    if b'PING' in dados:
-        dados = dados.replace(b'PING ', b'')
-        dados = dados.replace(b'\r\n', b'')
-        args = dados
-        conexao.enviar(b':server PONG server :%s\r\n' % args)
-         
+    #Quer dizer que existe pelo menos uma mensage inteira
+    if dados.endswith(b'\n'):
+        if dados == b'\n':
+            residuos += dados
+            residuos = residuos.replace(b'PING ', b'')
+            residuos = residuos.replace(b'\r\m', b'')
+            args = residuos
+            conexao.enviar(b':server PONG server :%s\r\n' % args)
+            residuos = ''
+        else:
+        #separar em linhas os dados recebidos
+            lines  = dados.split(b'\r\n')
+            if len(lines) > 2:
+                for i in range(0,len(lines)-1):
+                    if b'PING' in lines[i]:
+                        lines[i] = lines[i].replace(b'PING ', b'')
+                        lines[i] = lines[i].replace(b'\r\n', b'')
+                        args = lines[i]
+                        conexao.enviar(b':server PONG server :%s\r\n' % args)        
+        
+        #Significa que so existe 1 msg
+            else:
+                dados = dados.replace(b'PING ', b'')
+                dados = dados.replace(b'\r\n', b'')
+                args = dados
+                conexao.enviar(b':server PONG server :%s\r\n' % args)
+        
+    else:#Significa que a mensagem nao esta inteira, mas pode ainda ter mensagem inteira aqui dentro
+        lines = dados.split(b'\r\n')
+        #significa que possui pelo menos uma msg inteira
+        if len(lines) > 2:
+            for i in range(0,len(lines)-1):
+                if b'PING' in lines[i]:
+                    lines[i] = lines[i].replace(b'PING ', b'')
+                    lines[i] = lines[i].replace(b'\r\n', b'')
+                    args = lines[i]
+                    conexao.enviar(b':server PONG server :%s\r\n' % args)
+            #Depois de mandar os respectivos PONGS, pega os residuos da ultima mensagem
+            residuos = lines[len(lines)-1]
+        else:#Os residuos se acumulam aqui
+            residuos += dados
+        
 
 def conexao_aceita(conexao):
     print(conexao, 'nova conexão')
@@ -34,3 +69,4 @@ def conexao_aceita(conexao):
 servidor = Servidor(6667)
 servidor.registrar_monitor_de_conexoes_aceitas(conexao_aceita)
 asyncio.get_event_loop().run_forever()
+
