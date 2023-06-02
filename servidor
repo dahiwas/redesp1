@@ -8,6 +8,8 @@ def validar_nome(nome):
     return re.match(br'^[a-zA-Z][a-zA-Z0-9_-]*$', nome) is not None
 
 residuos = b''
+dicionario = []
+
 
 def sair(conexao):
     print(conexao, 'conexão fechada')
@@ -15,9 +17,17 @@ def sair(conexao):
 
 def dados_recebidos(conexao, dados):
     global residuos
+    global dicionario
     if dados == b'':
         return sair(conexao)
     print(conexao, dados)
+
+
+    ID = str(conexao)
+    ID = ID.split(' ')[3]
+    ID = ID.replace('>', '')
+    ID = ID.replace(' ', '')
+    
     #Quer dizer que existe pelo menos uma mensagem inteira
     if b'\n' in dados:
         #se a msg for apenas o final
@@ -28,17 +38,51 @@ def dados_recebidos(conexao, dados):
                 residuos = residuos.replace(b'\r\n', b'')
                 conexao.enviar(b':server PONG server :%s\r\n' % residuos)
                 residuos = ''
-        else:
-            if b'NICK' in (residuos or dados):
+        else: 
+            #Tratamento dos Nicknames
+            if b'NICK' in (residuos + dados):
                 residuos += dados
                 residuos = residuos.replace(b'NICK ', b'')
                 residuos = residuos.replace(b'\r\n', b'')
-                if validar_nome(residuos) == False:
-                    print(residuos)
-                    conexao.enviar(b':server 432 * %s :Erroneous nickname\r\n' % residuos)
-                else:
-                    conexao.enviar(b':server 001 %s :Welcome\r\n' % residuos)
-                    conexao.enviar(b':server 422 %s :MOTD File is missing\r\n' % residuos)
+                #Converte em ASCII para transformá-lo em lower mais facilmente
+                stringRes = residuos.decode('ascii')
+                stringRes = stringRes.lower()
+                
+                ##Verificar a existencia
+                if ID in str(dicionario) or stringRes in str(dicionario):
+                    #Se o ID ja está adicionado no dicionario, significa que quer trocar de nick
+                    if ID in str(dicionario):
+                        if stringRes in str(dicionario): 
+                            print('Caso 1')  
+                            nick2 = list(filter(lambda x: ID in x, dicionario))
+                            nick2 = nick2[0]
+                            nick2 = nick2.replace(ID, '')
+                            nick2 = nick2.replace(' ', '')
+                            nick2 = nick2.encode('utf-8')
+                            conexao.enviar(b':server 433 %s %s :Nickname is already in use\r\n' % (nick2, residuos))
+                        else:
+                            nick = list(filter(lambda x: ID in x, dicionario))
+                            nick = nick[0]
+                            nick = nick.replace(ID, '')
+                            nick = nick.replace(' ', '')
+                            nick = nick.encode('utf-8')
+                            conexao.enviar(b':%s NICK %s\r\n' % (nick, residuos))
+                    else:
+                        print('Caso 2')
+                        #Se nao estiver, eh alguem querendo entrar com algum nick, mas é bom verificar se jaestá em uso
+                        if stringRes in str(dicionario):
+                            conexao.enviar(b':server 433 * %s :Nickname is already in use\r\n' % residuos)
+                            existencia = 1
+                #Se nao tiver, basta adicionar
+                else: 
+                    if validar_nome(residuos) == False:
+                        conexao.enviar(b':server 432 * %s :Erroneous nickname\r\n' % residuos)
+                    else:
+                    #Salvar o Nickname com seu ID proprio
+                        stringRes += ' ' + ID
+                        dicionario.append(stringRes)
+                        conexao.enviar(b':server 001 %s :Welcome\r\n' % residuos)
+                        conexao.enviar(b':server 422 %s :MOTD File is missing\r\n' % residuos)
                 residuos = b''
         #separar em linhas os dados recebidos
             else:
