@@ -9,7 +9,7 @@ def validar_nome(nome):
 
 residuos = b''
 dicionario = []
-
+konexoes = []
 
 def sair(conexao):
     print(conexao, 'conexão fechada')
@@ -18,95 +18,54 @@ def sair(conexao):
 def dados_recebidos(conexao, dados):
     global residuos
     global dicionario
+    global konexoes
     if dados == b'':
         return sair(conexao)
-    print(conexao, dados)
-
-
+    print(conexao, dados) 
     ID = str(conexao)
     ID = ID.split(' ')[3]
     ID = ID.replace('>', '')
     ID = ID.replace(' ', '')
-    
-    #Quer dizer que existe pelo menos uma mensagem inteira
-    if b'\n' in dados:
-        #se a msg for apenas o final
-        if dados == b'\n':
-            if b'PING' in residuos:
-                residuos += dados
-                residuos = residuos.replace(b'PING ', b'')
-                residuos = residuos.replace(b'\r\n', b'')
-                conexao.enviar(b':server PONG server :%s\r\n' % residuos)
-                residuos = ''
-        else: 
-            #Tratamento dos Nicknames
-            if b'NICK' in (residuos + dados):
-                residuos += dados
-                residuos = residuos.replace(b'NICK ', b'')
-                residuos = residuos.replace(b'\r\n', b'')
-                #Converte em ASCII para transformá-lo em lower mais facilmente
-                stringRes = residuos.decode('ascii')
-                stringRes = stringRes.lower()
-                
-                ##Verificar a existencia
-                if ID in str(dicionario) or stringRes in str(dicionario):
-                    #Se o ID ja está adicionado no dicionario, significa que quer trocar de nick
-                    if ID in str(dicionario):
-                        if stringRes in str(dicionario): 
-                            print('Caso 1')  
-                            nick2 = list(filter(lambda x: ID in x, dicionario))
-                            nick2 = nick2[0]
-                            nick2 = nick2.replace(ID, '')
-                            nick2 = nick2.replace(' ', '')
-                            nick2 = nick2.encode('utf-8')
-                            conexao.enviar(b':server 433 %s %s :Nickname is already in use\r\n' % (nick2, residuos))
-                        else:
-                            nick = list(filter(lambda x: ID in x, dicionario))
-                            nick = nick[0]
-                            nick = nick.replace(ID, '')
-                            nick = nick.replace(' ', '')
-                            nick = nick.encode('utf-8')
-                            conexao.enviar(b':%s NICK %s\r\n' % (nick, residuos))
-                    else:
-                        print('Caso 2')
-                        #Se nao estiver, eh alguem querendo entrar com algum nick, mas é bom verificar se jaestá em uso
-                        if stringRes in str(dicionario):
-                            conexao.enviar(b':server 433 * %s :Nickname is already in use\r\n' % residuos)
-                            existencia = 1
-                #Se nao tiver, basta adicionar
-                else: 
-                    if validar_nome(residuos) == False:
-                        conexao.enviar(b':server 432 * %s :Erroneous nickname\r\n' % residuos)
-                    else:
-                    #Salvar o Nickname com seu ID proprio
-                        stringRes += ' ' + ID
-                        dicionario.append(stringRes)
-                        conexao.enviar(b':server 001 %s :Welcome\r\n' % residuos)
-                        conexao.enviar(b':server 422 %s :MOTD File is missing\r\n' % residuos)
-                residuos = b''
-        #separar em linhas os dados recebidos
-            else:
-                lines  = dados.split(b'\r\n')
-                if len(lines) > 2:
-                    for i in range(0,len(lines)-1):
-                        if b'PING' in lines[i]:
-                            lines[i] = lines[i].replace(b'PING ', b'')
-                            lines[i] = lines[i].replace(b'\r\n', b'')
-                            conexao.enviar(b':server PONG server :%s\r\n' % lines[i])        
-                    residuos += lines[len(lines)-1] 
-        #Significa que so existe 1 msg
-                else:
-                    dados = dados.replace(b'PING ', b'')
-                    dados = dados.replace(b'\r\n', b'')
-                    conexao.enviar(b':server PONG server :%s\r\n' % dados)
-    else:#Os residuos se acumulam aqui
+    #Pegar todas as conexoes que entrarem
+    if conexao in konexoes:
+        print('ja ta dentro')
+    else:
+        konexoes.append(conexao)
+    #Significa que existe uma mensagem inteira ja
+    if b'\n' in (residuos+dados):
         residuos += dados
-        
+        residuos = residuos.split(b'\n',1)
+        dados = residuos[0]+b'\n'
+        residuos = residuos[1]
+        if b'PING' in dados:
+            dados = dados.split(b'PING ')[1]
+            print(b':server PONG server :%s' % dados)
+            conexao.enviar(b':server PONG server :%s' % dados)
+            while(b'PING' in residuos and b'\n' in residuos):
+                dados = residuos.split(b'\n', 1)[0]
+                residuos = residuos.split(b'\n',1)[1]
+                dados = dados.split(b'PING ')[1]+b'\n'
+                print(b':server PONG server :%s' %dados)
+                print(b'residuos: ', residuos)
+                conexao.enviar(b':server PONG server :%s' % dados)
+        if b'NICK' in dados:
+            if b'NICK' in dicionario:
+                print(b'fudeu')
+            else:
+                #ADD no dicionario
+                dicionario.append(dados)
+                print(dicionario)
+                print(b'add')
+                
+    else:
+        #Ir acumulando dados ate que se encontre uma mensagem inteira
+        residuos += dados
 
+    
+        
 def conexao_aceita(conexao):
     print(conexao, 'nova conexão')
     conexao.registrar_recebedor(dados_recebidos)
-
 
 servidor = Servidor(6667)
 servidor.registrar_monitor_de_conexoes_aceitas(conexao_aceita)
