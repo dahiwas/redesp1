@@ -8,8 +8,6 @@ class logins:
     def __init__(self, dataNick=None, dataConnection = None):
         self.dataNick = dataNick
         self.dataConnection = dataConnection
-        self.nextData = None
-
 
 def validar_nome(nome):
     return re.match(br'^[a-zA-Z][a-zA-Z0-9_-]*$', nome) is not None
@@ -18,6 +16,7 @@ residuos = b''
 dicionario = []
 konexoes = []
 first = logins(None,None)
+login = []
 
 def sair(conexao):
     print(conexao, 'conexão fechada')
@@ -28,6 +27,7 @@ def dados_recebidos(conexao, dados):
     global dicionario
     global konexoes
     global first
+    global login 
     if dados == b'':
         return sair(conexao)
     print(conexao, dados) 
@@ -77,36 +77,45 @@ def dados_recebidos(conexao, dados):
 
                     conexao.enviar(b':server 001 %s :Welcome\r\n' %dados)
                     conexao.enviar(b':server 422 %s :MOTD File is missing\r\n' %dados)
+                    login.append(first)
                 #Caso tenham mais nicks no test
                 else:
                     estaContido = False
                     jaPossui = False
-                    third = second
-                    while third: #Verificação se essa conexão ja estava presente
-                        if third.dataConnection == conexao:
-                           estaContido = True
-                           tmp = third.dataNick
-                           print('acho conexao')
-                        if third.dataNick.lower() == dados.lower():
-                           jaPossui = True
-                           print('acho nome igual')
-                        third = third.nextData
+                    for i in range(len(login)):
+                        if login[i].dataConnection == conexao:
+                            estaContido = True
+                            tmp = login[i].dataNick
+                            print('Conexao existente')
+                        if login[i].dataNick.lower() == dados.lower():
+                            jaPossui = True
+                            print('Nome existente')
                         #Verificação se ja estava presente e também se ja existe esse nick
                     if jaPossui and estaContido:
-                        #Quer colocar um nick de alguem
+                        #Uma pessoa que ja possui um nick quer colocar um nick de uma ja existente
                         print(b':server 433 %s %s :Nickname is already in use\r\n' % (tmp, dados))
                         conexao.enviar(b':server 433 %s %s :Nickname is already in use\r\n' % (tmp, dados))
                     elif jaPossui and not estaContido:
+                        #Uma pessoa que nao possui nick quer colocar um nick de alguem
                         print(b':server %s :Nickname is already in use\r\n' % (dados))
                         conexao.enviar(b':server 433 * %s :Nickname is already in use\r\n' % (dados))
                     elif not jaPossui and estaContido:
+                        #Uma pessoa que possui nick quer colocar um nick disponivel
                         print(b':%s NICK %s\r\n' % (tmp, dados))
                         conexao.enviar(b':%s NICK %s\r\n' % (tmp, dados))
+                        tmp2 = 0
+                        for i in range(len(login)):
+                            if login[i].dataNick == tmp: 
+                                break
+                            tmp2 = tmp2+1
+                        print('esse eh o valor: ',tmp2)
+                        login.pop(tmp2)
+                        tmp = logins(dados, conexao)
+                        login.append(tmp)
                     else:
-                        #Add
-                        third = logins(dados, conexao)
-                        second.nextData = third
-                        print('Adicionei outro')
+                        #Colocar um nick novo de uma conexao nova
+                        tmp = logins(dados, conexao)
+                        login.append(tmp)
                         print(b':server 001 %s :Welcome\r\n' %dados)                                          
                         print(b':server 422 %s :MOTD File is missing\r\n' %dados)
                         conexao.enviar(b':server 001 %s :Welcome\r\n' %dados)
