@@ -153,9 +153,12 @@ def dados_recebidos(conexao, dados):
                 #print(b':%s PRIVMSG %s :%s\r\n' % (nickRemetente, nick, msg))
                 
                 if tmp3.upper() == nick:
-                    destino.enviar(b':%s PRIVMSG %s :%s\r\n' % (nickRemetente, nick.lower(), msg))
+                    print('testes1',b':%s PRIVMSG %s :%s\r\n' % (nickRemetente, nick.lower(), msg))
+                    print('testes2',b':%s PRIVMSG %s :%s\r\n' % (nickRemetente, nick, msg))
+                    #destino.enviar(b':%s PRIVMSG %s :%s\r\n' % (nickRemetente, nick.lower(), msg))
                     destino.enviar(b':%s PRIVMSG %s :%s\r\n' % (nickRemetente, nick, msg))
                 else:
+                    print('testes3',b':%s PRIVMSG %s :%s\r\n' % (nickRemetente, nick, msg))
                     destino.enviar(b':%s PRIVMSG %s :%s\r\n' % (nickRemetente, nick, msg))
             #print(residuos)
             if b'NICK' in residuos:
@@ -230,9 +233,17 @@ def dados_recebidos(conexao, dados):
                     print(b':server 432 * %s :Erroneous nickname\r\n' %residuos)
                     conexao.enviar(b':server 432 * %s :Erroneous nickname\r\n' %residuos)
         elif b'JOIN' in dados:
-            dados = dados.split(b'JOIN ',1)
+            dados = dados.split(b'JOIN ',1)[1]
             print(dados)
-
+            ch = dados
+            ch = ch.replace(b'#', b'')
+            ch = ch.replace(b'\r\n', b'')
+            for i in range(len(login)):
+                if login[i].dataConnection == conexao:
+                    tmp1 = login[i].dataNick
+            print(b':%s JOIN :#%s\r\n' %(tmp1, ch))
+            conexao.enviar(b':%s JOIN :#%s\r\n' %(tmp1, ch))
+            conexao.enviar(b':%s JOIN :#%s\r\n' %(tmp1, ch))
     else:
         #Ir acumulando dados ate que se encontre uma mensagem inteira
         residuos += dados
