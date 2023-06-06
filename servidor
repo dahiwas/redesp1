@@ -271,6 +271,26 @@ def dados_recebidos(conexao, dados):
                     login[i].channel.append(ch)
             print(b':%s JOIN :#%s\r\n' %(tmp1, ch))
             conexao.enviar(b':%s JOIN :#%s\r\n' %(tmp1, ch))
+        elif b'PART' in dados:
+            #s1.sendall(b'PART %s\r\n' % ch2)
+            dados = dados.split(b'PART ', 1)[1]
+            dados = dados.split(b' ',1)[0]
+            dados = dados.replace(b'\r\n', b'')
+            dados = dados.replace(b'#', b'')
+            print(b'entrou aqui')
+            for i in range(len(login)):
+                if login[i].dataConnection == conexao:
+                    nick = login[i].dataNick
+            ch = dados
+            for i in range(len(login)):
+                if ch in login[i].channel:
+                    if login[i].dataConnection == conexao:
+                        print('antes do delete:', login[i].channel)
+                        login[i].channel.remove(ch)
+                        print('dps do delete:', login[i].channel)
+                    print(login[i].dataConnection)
+                    login[i].dataConnection.enviar(b':%s PART #%s\r\n' %(nick,ch))
+                    #print(b':%s PART %s\r\n' %(nick,ch))
     else:
         #Ir acumulando dados ate que se encontre uma mensagem inteira
         residuos += dados
