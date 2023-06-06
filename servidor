@@ -8,7 +8,7 @@ class logins:
     def __init__(self, dataNick=None, dataConnection = None):
         self.dataNick = dataNick
         self.dataConnection = dataConnection
-        self.channel = None
+        self.channel = []
 
 def validar_nome(nome):
     return re.match(br'^[a-zA-Z][a-zA-Z0-9_-]*$', nome) is not None
@@ -128,13 +128,34 @@ def dados_recebidos(conexao, dados):
         elif b'PRIVMSG' in dados:
         #Verificacao se o nick está contido
             estaContido = False
+            print('tamo vendo',dados.split(b'PRIVMSG '))
+            #Verificação se o remetente esta no canal que quer se comunicar
+            estaNoCanal = False
+            for i in range(len(login)): 
+                if login[i].dataConnection == conexao:
+                    for j in range(len(login[i].channel)):
+                        if login[i].channel[j] in dados.lower():
+                            estaNoCanal = True
+                            break
+            if estaNoCanal:
+                estaContido = True
+                canal = dados.split(b'PRIVMSG ')[1]
+                msgCanal = canal.split(b':')[1]
+                canal = canal.split(b':')[0]
+                canal = canal.replace(b' ', b'')
+                canal = canal.replace(b'#', b'')
+                msgCanal = msgCanal.replace(b'\r\n',b'')
+                print('essa eh o canal ' ,canal)
+                print('esse e a msg ', msgCanal)
+                    
         #Info retiradas do socket
             dados = dados.split(b'PRIVMSG ', 1)[1]
+
             dados = dados.split(b':',1)
             msg = dados[1]
             msg = msg.replace(b'\r\n',b'')
             nick = dados[0]
-            nick = nick.replace(b' ', b'')
+            nick = nick.replace(b' ', b'')            
             print(nick)
             print(nick.lower())
         #Info retiradas do que a gente ja tem
@@ -149,16 +170,22 @@ def dados_recebidos(conexao, dados):
             #Pegar o nick do remetente
                 if login[i].dataConnection == conexao:
                     nickRemetente = login[i].dataNick
+                #if login[i].channel is not None:
+
             if estaContido:   
-                #print(b':%s PRIVMSG %s :%s\r\n' % (nickRemetente, nick, msg))
-                
-                if tmp3.upper() == nick:
-                    print('testes1',b':%s PRIVMSG %s :%s\r\n' % (nickRemetente, nick.lower(), msg))
-                    print('testes2',b':%s PRIVMSG %s :%s\r\n' % (nickRemetente, nick, msg))
-                    #destino.enviar(b':%s PRIVMSG %s :%s\r\n' % (nickRemetente, nick.lower(), msg))
-                    destino.enviar(b':%s PRIVMSG %s :%s\r\n' % (nickRemetente, nick, msg))
+               #print('testes3',b':%s PRIVMSG %s :%s\r\n' % (nickRemetente, nick, msg))
+                if estaNoCanal:
+                    print('entrei aqui')
+                    for i in range(len(login)):
+                        print('os canais do login:',login[i].dataNick,'Sao esses:',login[i].channel)
+                        if login[i].dataConnection is not conexao:
+                            if canal.lower() in login[i].channel:
+                                #print('essa eh a conexao: ',login[i].dataConnection)
+                                #print(b':%s PRIVMSG #%s :%s\r\n' % (nickRemetente, canal, msgCanal))
+                                #login[i].dataConnection.enviar(b':%s PRIVMSG #%s :%s\r\n' % (nickRemetente, canal, msgCanal))
+                                print('essa eh a msg log')
+                                print(login[i].dataConnection.enviar(b':%s PRIVMSG #%s :%s\r\n' % (nickRemetente, canal, msgCanal)))
                 else:
-                    print('testes3',b':%s PRIVMSG %s :%s\r\n' % (nickRemetente, nick, msg))
                     destino.enviar(b':%s PRIVMSG %s :%s\r\n' % (nickRemetente, nick, msg))
             #print(residuos)
             if b'NICK' in residuos:
@@ -241,8 +268,8 @@ def dados_recebidos(conexao, dados):
             for i in range(len(login)):
                 if login[i].dataConnection == conexao:
                     tmp1 = login[i].dataNick
+                    login[i].channel.append(ch)
             print(b':%s JOIN :#%s\r\n' %(tmp1, ch))
-            conexao.enviar(b':%s JOIN :#%s\r\n' %(tmp1, ch))
             conexao.enviar(b':%s JOIN :#%s\r\n' %(tmp1, ch))
     else:
         #Ir acumulando dados ate que se encontre uma mensagem inteira
