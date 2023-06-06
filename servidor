@@ -8,6 +8,7 @@ class logins:
     def __init__(self, dataNick=None, dataConnection = None):
         self.dataNick = dataNick
         self.dataConnection = dataConnection
+        self.channel = None
 
 def validar_nome(nome):
     return re.match(br'^[a-zA-Z][a-zA-Z0-9_-]*$', nome) is not None
@@ -46,6 +47,7 @@ def dados_recebidos(conexao, dados):
         residuos = residuos.split(b'\n',1)
         dados = residuos[0]+b'\n'
         residuos = residuos[1]
+        continuar = True        
         if b'PING' in dados:
             dados = dados.split(b'PING ')[1]
             print(b':server PONG server :%s' % dados)
@@ -57,28 +59,28 @@ def dados_recebidos(conexao, dados):
                 print(b':server PONG server :%s' %dados)
                 print(b'residuos: ', residuos)
                 conexao.enviar(b':server PONG server :%s' % dados)
-        if b'NICK' in dados:
-            #Verificação se é valido
+        elif b'NICK' in dados:
+        #Verificação se é valido
             dados = dados.split(b'NICK ', 1)[1]
             dados = dados.replace(b'\r\n', b'')
             if validar_nome(dados):
 
-            #ADD no dicionario
-            #Adicionando o primeiro nick
+        #ADD no dicionario
+        #Adicionando o primeiro nick
                 second = first
                 if first.dataNick == None:
                     print('Primeira adicao')
                     first = logins(dados,conexao)
                     print(first.dataNick)
                     print(first.dataConnection)
-                    
+                
                     print(b':server 001 %s :Welcome\r\n' %dados)
                     print(b':server 422 %s :MOTD File is missing\r\n' %dados)
 
                     conexao.enviar(b':server 001 %s :Welcome\r\n' %dados)
                     conexao.enviar(b':server 422 %s :MOTD File is missing\r\n' %dados)
                     login.append(first)
-                #Caso tenham mais nicks no test
+            #Caso tenham mais nicks no test
                 else:
                     estaContido = False
                     jaPossui = False
@@ -96,7 +98,7 @@ def dados_recebidos(conexao, dados):
                         print(b':server 433 %s %s :Nickname is already in use\r\n' % (tmp, dados))
                         conexao.enviar(b':server 433 %s %s :Nickname is already in use\r\n' % (tmp, dados))
                     elif jaPossui and not estaContido:
-                        #Uma pessoa que nao possui nick quer colocar um nick de alguem
+                    #Uma pessoa que nao possui nick quer colocar um nick de alguem
                         print(b':server %s :Nickname is already in use\r\n' % (dados))
                         conexao.enviar(b':server 433 * %s :Nickname is already in use\r\n' % (dados))
                     elif not jaPossui and estaContido:
@@ -113,24 +115,129 @@ def dados_recebidos(conexao, dados):
                         tmp = logins(dados, conexao)
                         login.append(tmp)
                     else:
-                        #Colocar um nick novo de uma conexao nova
+                    #Colocar um nick novo de uma conexao nova
                         tmp = logins(dados, conexao)
                         login.append(tmp)
                         print(b':server 001 %s :Welcome\r\n' %dados)                                          
                         print(b':server 422 %s :MOTD File is missing\r\n' %dados)
                         conexao.enviar(b':server 001 %s :Welcome\r\n' %dados)
-                        conexao.enviar(b':server 422 %s :MOTD File is missing\r\n' %dados)
-                         
+                        conexao.enviar(b':server 422 %s :MOTD File is missing\r\n' %dados)      
             else:
                 print(b':server 432 * %s :Erroneous nickname\r\n' %dados)
                 conexao.enviar(b':server 432 * %s :Erroneous nickname\r\n' %dados)
+        elif b'PRIVMSG' in dados:
+        #Verificacao se o nick está contido
+            estaContido = False
+        #Info retiradas do socket
+            dados = dados.split(b'PRIVMSG ', 1)[1]
+            dados = dados.split(b':',1)
+            msg = dados[1]
+            msg = msg.replace(b'\r\n',b'')
+            nick = dados[0]
+            nick = nick.replace(b' ', b'')
+            print(nick)
+            print(nick.lower())
+        #Info retiradas do que a gente ja tem
+            for i in range(len(login)):
+                print('esses sao os nicks: ',login[i].dataNick)
+            #Pegar a conexao do destino
+                if login[i].dataNick == nick.lower():
+             #       print('reconheceu')
+                    destino = login[i].dataConnection
+                    tmp3 = login[i].dataNick
+                    estaContido = True
+            #Pegar o nick do remetente
+                if login[i].dataConnection == conexao:
+                    nickRemetente = login[i].dataNick
+            if estaContido:   
+                #print(b':%s PRIVMSG %s :%s\r\n' % (nickRemetente, nick, msg))
                 
+                if tmp3.upper() == nick:
+                    destino.enviar(b':%s PRIVMSG %s :%s\r\n' % (nickRemetente, nick.lower(), msg))
+                    destino.enviar(b':%s PRIVMSG %s :%s\r\n' % (nickRemetente, nick, msg))
+                else:
+                    destino.enviar(b':%s PRIVMSG %s :%s\r\n' % (nickRemetente, nick, msg))
+            #print(residuos)
+            if b'NICK' in residuos:
+               # print('tamo aqui')
+            #Verificação se é valido
+               # print('residuos aqui: ', residuos)
+               # for i in range(len(login)):
+               #     print(login[i].dataNick)
+                residuos = residuos.split(b'NICK ', 1)[1]
+                residuos = residuos.replace(b'\r\n', b'')
+                if validar_nome(residuos):
+
+            #ADD no dicionario
+            #Adicionando o primeiro nick
+                    second = first
+                    if first.dataNick == None:
+                    #    print('Primeira adicao')
+                        first = logins(dados,conexao)
+                    #    print(first.dataNick)
+                    #    print(first.dataConnection)
+                    
+                        print(b':server 001 %s :Welcome\r\n' %residuos)
+                        print(b':server 422 %s :MOTD File is missing\r\n' %residuos)
+
+                        conexao.enviar(b':server 001 %s :Welcome\r\n' %residuos)
+                        conexao.enviar(b':server 422 %s :MOTD File is missing\r\n' %residuos)
+                        login.append(first)
+                #Caso tenham mais nicks no test
+                    else:
+                        estaContido = False
+                        jaPossui = False
+                        for i in range(len(login)):
+                            if login[i].dataConnection == conexao:
+                                estaContido = True
+                                tmp = login[i].dataNick
+                                print('Conexao existente')
+                            if login[i].dataNick.lower() == residuos.lower():
+                                jaPossui = True
+                                print('Nome existente')
+                            #Verificação se ja estava presente e também se ja existe esse nick
+                        if jaPossui and estaContido:
+                            #Uma pessoa que ja possui um nick quer colocar um nick de uma ja existente
+                            print(b':server 433 %s %s :Nickname is already in use\r\n' % (tmp, residuos))
+                            conexao.enviar(b':server 433 %s %s :Nickname is already in use\r\n' % (tmp, residuos))
+                        elif jaPossui and not estaContido:
+                        #Uma pessoa que nao possui nick quer colocar um nick de alguem
+                            print(b':server %s :Nickname is already in use\r\n' % (residuos))
+                            conexao.enviar(b':server 433 * %s :Nickname is already in use\r\n' % (residuos))
+                        elif not jaPossui and estaContido:
+                            #Uma pessoa que possui nick quer colocar um nick disponivel
+                            print(b':%s NICK %s\r\n' % (tmp, residuos))
+                            conexao.enviar(b':%s NICK %s\r\n' % (tmp, residuos))
+                            tmp2 = 0
+                            for i in range(len(login)):
+                                if login[i].dataNick == tmp:
+                              #      print('achei o repetido')
+                                    break
+                                tmp2 = tmp2+1
+                            print('esse eh o valor: ',tmp2)
+                            login.pop(tmp2)
+                            lol = logins(residuos, conexao)
+                            login.append(lol)
+                        else:
+                        #Colocar um nick novo de uma conexao nova
+                            lol = logins(residuos, conexao)
+                            login.append(lol)
+                            print(b':server 001 %s :Welcome\r\n' %residuos)                                          
+                            print(b':server 422 %s :MOTD File is missing\r\n' %residuos)
+                            conexao.enviar(b':server 001 %s :Welcome\r\n' %residuos)
+                            conexao.enviar(b':server 422 %s :MOTD File is missing\r\n' %residuos)      
+                else:
+                    print(b':server 432 * %s :Erroneous nickname\r\n' %residuos)
+                    conexao.enviar(b':server 432 * %s :Erroneous nickname\r\n' %residuos)
+        elif b'JOIN' in dados:
+            dados = dados.split(b'JOIN ',1)
+            print(dados)
+
     else:
         #Ir acumulando dados ate que se encontre uma mensagem inteira
         residuos += dados
-
     
-        
+
 def conexao_aceita(conexao):
     print(conexao, 'nova conexão')
     conexao.registrar_recebedor(dados_recebidos)
