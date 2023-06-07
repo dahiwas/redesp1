@@ -43,7 +43,6 @@ def desligar(conexao):
                     login[i].dataConnection.enviar(b':%s QUIT\r\n' % nick)
         sockInd.close() 
     #login[2].dataConnection.enviar(b':%s QUIT\r\n' % login[1].dataNick)
-    #print('masvai')
     
 
 def dados_recebidos(conexao, dados):
