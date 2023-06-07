@@ -24,7 +24,6 @@ login = []
 
 def desligar(conexao):   
     print(conexao, 'conexao fechada')
-   # nick = b'dale'
     conexao.fechar()
     if len(login) >= 3:
         sockInd = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
