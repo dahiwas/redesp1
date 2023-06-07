@@ -19,9 +19,28 @@ konexoes = []
 first = logins(None,None)
 login = []
 
-def sair(conexao):
-    print(conexao, 'conexão fechada')
+#sockInd = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+#sockInd.connect(('localhost', 6667))
+
+def desligar(conexao):   
+    print(conexao, 'conexao fechada')
+   # nick = b'dale'
     conexao.fechar()
+    if len(login) == 3:
+        sockInd = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sockInd.connect(('localhost',6667))
+
+        for i in range(len(login)):
+            if login[i].dataConnection == conexao:
+                nick = login[i].dataNick
+                login[i].dataNick = b''
+        for i in range(len(login)):
+            if login[i].dataConnection is not conexao:
+                login[i].dataConnection.enviar(b':%s QUIT\r\n' % nick)
+        sockInd.close() 
+    #login[2].dataConnection.enviar(b':%s QUIT\r\n' % login[1].dataNick)
+    #print('masvai')
+    
 
 def dados_recebidos(conexao, dados):
     global residuos
@@ -29,8 +48,16 @@ def dados_recebidos(conexao, dados):
     global konexoes
     global first
     global login 
+
+    nickname = b''
     if dados == b'':
-        return sair(conexao)
+        #login[0].dataConnection.enviar(b'')
+     #   print('dale')
+        return desligar(conexao)
+   
+ 
+
+
     print(conexao, dados) 
     ID = str(conexao)
     ID = ID.split(' ')[3]
