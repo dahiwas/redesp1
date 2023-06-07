@@ -287,8 +287,8 @@ def dados_recebidos(conexao, dados):
                     print(b':server 432 * %s :Erroneous nickname\r\n' %residuos)
                     conexao.enviar(b':server 432 * %s :Erroneous nickname\r\n' %residuos)
         elif b'JOIN' in dados:
+            chMemb = []
             dados = dados.split(b'JOIN ',1)[1]
-            print(dados)
             ch = dados
             ch = ch.replace(b'#', b'')
             ch = ch.replace(b'\r\n', b'')
@@ -296,8 +296,12 @@ def dados_recebidos(conexao, dados):
                 if login[i].dataConnection == conexao:
                     tmp1 = login[i].dataNick
                     login[i].channel.append(ch)
-            print(b':%s JOIN :#%s\r\n' %(tmp1, ch))
-            conexao.enviar(b':%s JOIN :#%s\r\n' %(tmp1, ch))
+            for i in range(len(login)):
+                if ch in login[i].channel:
+                    chMemb.append(login[i].dataNick)
+                    login[i].dataConnection.enviar(b':%s JOIN :#%s\r\n' %(tmp1, ch))
+            conexao.enviar(b':server 353 %s = #%s :%s\r\n' % (tmp1, ch, b' '.join(sorted(chMemb))))
+            conexao.enviar(b':server 366 %s #%s :End of /NAMES list.\r\n' % (tmp1, ch))
         elif b'PART' in dados:
             #s1.sendall(b'PART %s\r\n' % ch2)
             dados = dados.split(b'PART ', 1)[1]
