@@ -33,10 +33,15 @@ def desligar(conexao):
         for i in range(len(login)):
             if login[i].dataConnection == conexao:
                 nick = login[i].dataNick
+                vazio = []
+                if login[i].channel is not vazio:
+                    ch = login[i].channel[0]
                 login[i].dataNick = b''
+                login[i].channel = []
         for i in range(len(login)):
             if login[i].dataConnection is not conexao:
-                login[i].dataConnection.enviar(b':%s QUIT\r\n' % nick)
+                if ch in login[i].channel:
+                    login[i].dataConnection.enviar(b':%s QUIT\r\n' % nick)
         sockInd.close() 
     #login[2].dataConnection.enviar(b':%s QUIT\r\n' % login[1].dataNick)
     #print('masvai')
